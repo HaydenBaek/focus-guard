@@ -1,0 +1,33 @@
+data:
+  events_dir: data/events
+  min_rows: 500
+
+labels:
+  strategy: "bootstrap_rules"   # later: "manual_review"
+  away_label_if_face_missing: true
+
+split:
+  method: "by_date"
+  test_days: 2
+  val_days: 2
+
+features:
+  cols:
+    - face_present
+    - nose_offset_abs
+    - nose_offset_signed
+
+model:
+  kind: "sklearn_logreg"
+  logreg:
+    C: 1.0
+    class_weight: "balanced"
+    max_iter: 200
+
+mlflow:
+  experiment: "focusguard"
+  tracking_uri: "sqlite:///mlflow.db"
+
+outputs:
+  model_dir: "models"
+  report_dir: "reports"
