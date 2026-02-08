@@ -8,8 +8,8 @@ labels:
 
 split:
   method: "by_date"
-  test_days: 2
-  val_days: 2
+  test_days: 0
+  val_days: 0
 
 features:
   cols:

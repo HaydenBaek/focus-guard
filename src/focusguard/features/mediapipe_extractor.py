@@ -62,7 +62,7 @@ class MediaPipeFaceExtractor:
     def extract(self, frame_bgr: np.ndarray) -> FaceFeatures:
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
-        # ✅ Correct Tasks API image wrapper
+        # DONE Correct Tasks API image wrapper
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
 
         result = self._landmarker.detect(mp_image)

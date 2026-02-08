@@ -1,0 +1,15 @@
+{
+  "rows": 1524,
+  "missing_rates": {
+    "nose_offset_signed": 0.0,
+    "label": 0.0,
+    "face_present": 0.0,
+    "nose_offset_abs": 0.0
+  },
+  "label_distribution": {
+    "FOCUSED": 996,
+    "AWAY": 290,
+    "DISTRACTED": 238
+  },
+  "warnings": []
+}

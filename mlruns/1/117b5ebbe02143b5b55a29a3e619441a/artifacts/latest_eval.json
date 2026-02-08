@@ -1,0 +1,54 @@
+{
+  "summary": {
+    "rows": 1524,
+    "dates": 1,
+    "camera_on_rate": 1.0,
+    "face_present_rate": 0.84251968503937,
+    "state_smooth_counts": {
+      "FOCUSED": 1012,
+      "DISTRACTED": 263,
+      "AWAY": 249
+    }
+  },
+  "quality": {
+    "train": {
+      "rows": 1524,
+      "missing_rates": {
+        "face_present": 0.0,
+        "nose_offset_signed": 0.0,
+        "label": 0.0,
+        "nose_offset_abs": 0.0
+      },
+      "label_distribution": {
+        "FOCUSED": 996,
+        "AWAY": 290,
+        "DISTRACTED": 238
+      },
+      "warnings": []
+    },
+    "val": {
+      "rows": 0,
+      "missing_rates": {
+        "face_present": NaN,
+        "nose_offset_signed": NaN,
+        "label": NaN,
+        "nose_offset_abs": NaN
+      },
+      "label_distribution": {},
+      "warnings": []
+    },
+    "test": {
+      "rows": 0,
+      "missing_rates": {
+        "face_present": NaN,
+        "nose_offset_signed": NaN,
+        "label": NaN,
+        "nose_offset_abs": NaN
+      },
+      "label_distribution": {},
+      "warnings": []
+    }
+  },
+  "val_metrics": null,
+  "test_metrics": null
+}

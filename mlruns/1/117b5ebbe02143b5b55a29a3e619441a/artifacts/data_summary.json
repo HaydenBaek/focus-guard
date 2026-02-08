@@ -1,0 +1,11 @@
+{
+  "rows": 1524,
+  "dates": 1,
+  "camera_on_rate": 1.0,
+  "face_present_rate": 0.84251968503937,
+  "state_smooth_counts": {
+    "FOCUSED": 1012,
+    "DISTRACTED": 263,
+    "AWAY": 249
+  }
+}

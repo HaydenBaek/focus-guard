@@ -1,0 +1,11 @@
+{
+  "rows": 0,
+  "missing_rates": {
+    "label": NaN,
+    "nose_offset_abs": NaN,
+    "nose_offset_signed": NaN,
+    "face_present": NaN
+  },
+  "label_distribution": {},
+  "warnings": []
+}
