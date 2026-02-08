@@ -1,0 +1,23 @@
+camera:
+  enabled: true
+  index: 0
+
+runtime:
+  target_fps: 30
+  show_preview: true
+
+privacy:
+  allow_frame_storage: false
+
+smoothing:
+  window_size: 7
+  min_consensus: 5
+
+intervention:
+  soft_nudge_seconds: 4
+  escalate_seconds: 12
+  cooldown_seconds: 90
+
+logging:
+  enabled: true
+  output_dir: data/events/

@@ -1,0 +1,4 @@
+parquet:
+  partition_by:
+    - date
+  flush_every_n: 50
