@@ -1,0 +1,8 @@
+# Runtime event logs
+data/events/
+
+# Parquet files
+*.parquet
+
+models/
+reports/
