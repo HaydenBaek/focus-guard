@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from focusguard.serve.latency import measure_latency
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -39,6 +39,9 @@ def create_app(model_path: str = "models/focusguard_logreg.joblib") -> FastAPI:
             "endpoints": ["/health", "/config", "/predict"],
         }
 
+    @app.get("/latency")
+    def latency() -> Dict[str, Any]:
+        return measure_latency(loaded, n=200, warmup=20)
 
     @app.get("/health")
     def health() -> Dict[str, Any]:

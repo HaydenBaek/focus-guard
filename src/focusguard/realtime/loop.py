@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict
 
@@ -38,6 +39,8 @@ def run_camera_loop(cfg: Dict[str, Any]) -> None:
     index = int(cam_cfg.get("index", 0))
     show_preview = bool(runtime_cfg.get("show_preview", True))
     camera_on = bool(cam_cfg.get("enabled", True))
+    session_id = str(uuid.uuid4())
+    run_id = str(uuid.uuid4()) if camera_on else None
 
     cap = cv2.VideoCapture(index)
     if not cap.isOpened():
@@ -93,22 +96,25 @@ def run_camera_loop(cfg: Dict[str, Any]) -> None:
             player.play(event, video_filename="sample_clip.mp4")
 
         # Logging (derived-only)
-        row = make_empty_row(logger.schema)
-        row.update(
-            {
-                "ts": now,
-                "date": time.strftime("%Y-%m-%d", time.localtime(now)),
-                "camera_on": int(camera_on),
-                "face_present": fv.face_present if fv else 0,
-                "nose_offset_abs": fv.nose_offset_abs if fv else 0.0,
-                "nose_offset_signed": fv.nose_offset_signed if fv else 0.0,
-                "state_raw": raw_state.value,
-                "state_smooth": smooth_state.value,
-                "intervention_kind": event.kind.value if event else None,
-                "intervention_reason": event.reason if event else None,
-            }
-        )
-        logger.log(row)
+        if camera_on and run_id is not None:
+            row = make_empty_row(logger.schema)
+            row.update(
+                {
+                    "ts": now,
+                    "date": time.strftime("%Y-%m-%d", time.localtime(now)),
+                    "session_id": session_id,
+                    "run_id": run_id,
+                    "camera_on": int(camera_on),
+                    "face_present": fv.face_present if fv else 0,
+                    "nose_offset_abs": fv.nose_offset_abs if fv else 0.0,
+                    "nose_offset_signed": fv.nose_offset_signed if fv else 0.0,
+                    "state_raw": raw_state.value,
+                    "state_smooth": smooth_state.value,
+                    "intervention_kind": event.kind.value if event else None,
+                    "intervention_reason": event.reason if event else None,
+                }
+            )
+            logger.log(row)
 
         # UI
         if show_preview and frame is not None:
@@ -120,6 +126,10 @@ def run_camera_loop(cfg: Dict[str, Any]) -> None:
             break
         if key == ord("c"):
             camera_on = not camera_on
+            if camera_on:
+                run_id = str(uuid.uuid4())
+            else:
+                run_id = None
             print(f"Camera {'ON' if camera_on else 'OFF'}")
 
         # FPS

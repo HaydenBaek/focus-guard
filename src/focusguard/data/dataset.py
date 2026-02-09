@@ -11,6 +11,8 @@ import pandas as pd
 REQUIRED_COLUMNS = [
     "ts",
     "date",
+    "session_id",
+    "run_id",
     "camera_on",
     "face_present",
     "nose_offset_abs",
@@ -63,7 +65,15 @@ def _coerce_types(df: pd.DataFrame) -> pd.DataFrame:
         df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(int)
 
     # strings (nullable)
-    for c in ["date", "state_raw", "state_smooth", "intervention_kind", "intervention_reason"]:
+    for c in [
+        "date",
+        "session_id",
+        "run_id",
+        "state_raw",
+        "state_smooth",
+        "intervention_kind",
+        "intervention_reason",
+    ]:
         if c in df.columns:
             df[c] = df[c].astype("string")
 

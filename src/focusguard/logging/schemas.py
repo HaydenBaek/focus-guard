@@ -20,6 +20,10 @@ class EventSchema:
                 "ts",                  # float epoch seconds
                 "date",                # YYYY-MM-DD (partition key)
 
+                # Session/run identifiers
+                "session_id",          # str uuid4
+                "run_id",              # str uuid4
+
                 # Runtime
                 "fps",                 # float
                 "camera_on",           # int 0/1
