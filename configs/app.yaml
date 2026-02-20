@@ -4,7 +4,7 @@ camera:
 
 runtime:
   target_fps: 30
-  show_preview: true
+  show_preview: false
 
 privacy:
   allow_frame_storage: false

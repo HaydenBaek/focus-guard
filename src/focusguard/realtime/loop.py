@@ -1,22 +1,27 @@
 from __future__ import annotations
 
+import threading
 import time
 import uuid
-from pathlib import Path
 from typing import Any, Dict
 
 import cv2
 import numpy as np
-import yaml
+import uvicorn
 
 from focusguard.features.mediapipe_extractor import MediaPipeFaceExtractor
 from focusguard.features.feature_vector import build_feature_vector
 from focusguard.model.rules_baseline import RulesBaseline, FocusState
 from focusguard.model.smoothing import SlidingWindowSmoother
-from focusguard.intervention.engine import InterventionEngine
-from focusguard.intervention.player import LocalInterventionPlayer, InterventionAssets
 from focusguard.logging.parquet_logger import ParquetEventLogger
 from focusguard.logging.schemas import make_empty_row
+from focusguard.runtime.controller import FocusGuardController
+from focusguard.runtime.control_api import (
+    create_control_app,
+    InterventionConfig,
+    set_latest_frame,
+)
+from focusguard.runtime.intervention import play_local_video
 
 
 def _overlay_text(frame: np.ndarray, text: str) -> None:
@@ -32,6 +37,17 @@ def _overlay_text(frame: np.ndarray, text: str) -> None:
     )
 
 
+def _draw_face_box(frame: np.ndarray, bbox_norm, pad: float = 0.08) -> None:
+    if not bbox_norm:
+        return
+    h, w = frame.shape[:2]
+    x1 = int(max(0.0, bbox_norm[0] - pad) * w)
+    y1 = int(max(0.0, bbox_norm[1] - pad) * h)
+    x2 = int(min(1.0, bbox_norm[2] + pad) * w)
+    y2 = int(min(1.0, bbox_norm[3] + pad) * h)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 200, 255), 2)
+
+
 def run_camera_loop(cfg: Dict[str, Any]) -> None:
     cam_cfg = cfg.get("camera", {})
     runtime_cfg = cfg.get("runtime", {})
@@ -40,7 +56,7 @@ def run_camera_loop(cfg: Dict[str, Any]) -> None:
     show_preview = bool(runtime_cfg.get("show_preview", True))
     camera_on = bool(cam_cfg.get("enabled", True))
     session_id = str(uuid.uuid4())
-    run_id = str(uuid.uuid4()) if camera_on else None
+    run_id = None
 
     cap = cv2.VideoCapture(index)
     if not cap.isOpened():
@@ -51,28 +67,41 @@ def run_camera_loop(cfg: Dict[str, Any]) -> None:
     baseline = RulesBaseline(cfg)
     smoother = SlidingWindowSmoother(cfg)
 
-    # Interventions
-    with open("configs/interventions.yaml", "r") as f:
-        interventions_cfg = yaml.safe_load(f) or {}
-
-    intervention_engine = InterventionEngine(cfg, interventions_cfg)
-    player = LocalInterventionPlayer(
-        InterventionAssets(base_dir=Path("assets/interventions"))
-    )
-
     # Logging
     logger = ParquetEventLogger(cfg)
+
+    # Control plane
+    controller = FocusGuardController()
+    control_app = create_control_app(
+        controller, InterventionConfig(video_path="assets/interventions/focus.mp4")
+    )
+
+    def run_api() -> None:
+        uvicorn.run(control_app, host="127.0.0.1", port=8001, log_level="warning")
+
+    api_thread = threading.Thread(target=run_api, daemon=True)
+    api_thread.start()
 
     print("FocusGuard running. Press 'q' to quit, 'c' to toggle camera.")
 
     fps_last = time.time()
     fps_frames = 0
-    last_state_print = 0.0
+    last_mode = controller.snapshot()["mode"]
 
     while True:
         now = time.time()
 
-        if camera_on:
+        mode = controller.snapshot()["mode"]
+        if mode != last_mode:
+            if mode == "RUNNING" and camera_on:
+                run_id = str(uuid.uuid4())
+            else:
+                run_id = None
+            last_mode = mode
+
+        effective_camera_on = camera_on and mode == "RUNNING"
+
+        if effective_camera_on:
             ok, frame = cap.read()
             if not ok or frame is None:
                 continue
@@ -91,12 +120,16 @@ def run_camera_loop(cfg: Dict[str, Any]) -> None:
             ff = None
 
         # Intervention decision
-        event = intervention_engine.update(smooth_state, now=now)
-        if event:
-            player.play(event, video_filename="sample_clip.mp4")
+        should_fire = controller.update_observation(smooth_state.value, now=now)
+        if should_fire:
+            threading.Thread(
+                target=lambda: play_local_video("assets/interventions/focus.mp4"),
+                daemon=True,
+            ).start()
+            controller.mark_intervention_fired(now=now)
 
         # Logging (derived-only)
-        if camera_on and run_id is not None:
+        if effective_camera_on and run_id is not None:
             row = make_empty_row(logger.schema)
             row.update(
                 {
@@ -104,29 +137,37 @@ def run_camera_loop(cfg: Dict[str, Any]) -> None:
                     "date": time.strftime("%Y-%m-%d", time.localtime(now)),
                     "session_id": session_id,
                     "run_id": run_id,
-                    "camera_on": int(camera_on),
+                    "session_mode": mode,
+                    "camera_on": int(effective_camera_on),
                     "face_present": fv.face_present if fv else 0,
                     "nose_offset_abs": fv.nose_offset_abs if fv else 0.0,
                     "nose_offset_signed": fv.nose_offset_signed if fv else 0.0,
                     "state_raw": raw_state.value,
                     "state_smooth": smooth_state.value,
-                    "intervention_kind": event.kind.value if event else None,
-                    "intervention_reason": event.reason if event else None,
+                    "intervention_fired": int(should_fire),
+                    "intervention_type": "video" if should_fire else None,
+                    "policy_reason": "distracted_streak" if should_fire else None,
+                    "intervention_kind": "video" if should_fire else None,
+                    "intervention_reason": "distracted_streak" if should_fire else None,
                 }
             )
             logger.log(row)
 
         # UI
-        if show_preview and frame is not None:
-            _overlay_text(frame, smooth_state.value)
-            cv2.imshow("FocusGuard", frame)
+        if frame is not None:
+            _overlay_text(frame, f"{smooth_state.value} | {controller.snapshot()['mode']}")
+            if ff and ff.face_present:
+                _draw_face_box(frame, ff.bbox_norm)
+            set_latest_frame(frame)
+            if show_preview:
+                cv2.imshow("FocusGuard", frame)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
         if key == ord("c"):
             camera_on = not camera_on
-            if camera_on:
+            if camera_on and mode == "RUNNING":
                 run_id = str(uuid.uuid4())
             else:
                 run_id = None

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -20,6 +20,7 @@ class FaceFeatures:
     nose_offset: float
     nose_offset_abs: float
     landmark_count: int
+    bbox_norm: Optional[Tuple[float, float, float, float]] = None
 
 
 class MediaPipeFaceExtractor:
@@ -67,7 +68,7 @@ class MediaPipeFaceExtractor:
 
         result = self._landmarker.detect(mp_image)
         if not result.face_landmarks:
-            return FaceFeatures(False, 0.0, 0.0, 0)
+            return FaceFeatures(False, 0.0, 0.0, 0, None)
 
         face_landmarks = result.face_landmarks[0]  # list of normalized landmarks
         return self._compute_from_landmarks(face_landmarks)
@@ -78,14 +79,22 @@ class MediaPipeFaceExtractor:
             left_eye = face_landmarks[LEFT_EYE_OUTER_IDX]
             right_eye = face_landmarks[RIGHT_EYE_OUTER_IDX]
         except Exception:
-            return FaceFeatures(False, 0.0, 0.0, int(len(face_landmarks)))
+            return FaceFeatures(False, 0.0, 0.0, int(len(face_landmarks)), None)
 
         eye_mid_x = (float(left_eye.x) + float(right_eye.x)) / 2.0
         nose_offset = float(nose.x) - eye_mid_x
+
+        xs = [float(lm.x) for lm in face_landmarks]
+        ys = [float(lm.y) for lm in face_landmarks]
+        xmin = max(0.0, min(xs))
+        ymin = max(0.0, min(ys))
+        xmax = min(1.0, max(xs))
+        ymax = min(1.0, max(ys))
 
         return FaceFeatures(
             face_present=True,
             nose_offset=nose_offset,
             nose_offset_abs=abs(nose_offset),
             landmark_count=int(len(face_landmarks)),
+            bbox_norm=(xmin, ymin, xmax, ymax),
         )

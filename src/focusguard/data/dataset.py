@@ -13,12 +13,16 @@ REQUIRED_COLUMNS = [
     "date",
     "session_id",
     "run_id",
+    "session_mode",
     "camera_on",
     "face_present",
     "nose_offset_abs",
     "nose_offset_signed",
     "state_raw",
     "state_smooth",
+    "intervention_fired",
+    "intervention_type",
+    "policy_reason",
     "intervention_kind",
     "intervention_reason",
 ]
@@ -61,7 +65,7 @@ def _coerce_types(df: pd.DataFrame) -> pd.DataFrame:
     for c in ["ts", "nose_offset_abs", "nose_offset_signed"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    for c in ["camera_on", "face_present"]:
+    for c in ["camera_on", "face_present", "intervention_fired"]:
         df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(int)
 
     # strings (nullable)
@@ -71,6 +75,9 @@ def _coerce_types(df: pd.DataFrame) -> pd.DataFrame:
         "run_id",
         "state_raw",
         "state_smooth",
+        "session_mode",
+        "intervention_type",
+        "policy_reason",
         "intervention_kind",
         "intervention_reason",
     ]:

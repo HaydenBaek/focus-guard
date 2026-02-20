@@ -24,6 +24,9 @@ class EventSchema:
                 "session_id",          # str uuid4
                 "run_id",              # str uuid4
 
+                # Session mode
+                "session_mode",        # IDLE | RUNNING | PAUSED | STOPPED
+
                 # Runtime
                 "fps",                 # float
                 "camera_on",           # int 0/1
@@ -36,6 +39,11 @@ class EventSchema:
                 # Predictions
                 "state_raw",           # str
                 "state_smooth",        # str
+
+                # Policy
+                "intervention_fired",  # int 0/1
+                "intervention_type",   # str or None
+                "policy_reason",       # str or None
 
                 # Interventions (nullable)
                 "intervention_kind",   # str or None
